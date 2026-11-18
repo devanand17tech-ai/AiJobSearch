@@ -1,89 +1,108 @@
-deva# AI Job Search Agent 🤖💼
+# Multi-Agent AI Job Search System 🤖💼
 
-> An intelligent, autonomous AI Job Search Agent built with Python, Streamlit, PyMuPDF, OpenAI, and Apify. Designed for beginners learning AI Agent architectures.
-
----
-
-## 📚 What is an AI Agent?
-
-An **AI Agent** is an autonomous system that takes inputs from its **Environment**, processes them through **Perception** and **Reasoning**, formulates a **Plan**, executes **Actions** using **Tools**, gathers **Observations**, and makes **Decisions** to achieve a specific **Goal**.
-
-Unlike a simple script or a basic LLM prompt, an AI Agent acts as an **orchestration layer** that dynamically coordinates multiple tools (PDF parsers, API web scrapers, LLMs, and ranking algorithms) to solve complex workflows.
+> A modular, production-style **Multi-Agent AI Job Search System** built with Python, LangGraph, Streamlit, PyMuPDF, OpenAI, Pydantic, and Apify.
 
 ---
 
-## 🎯 What This Project Does
+## 📚 Multi-Agent Architecture Overview
 
-1. **Upload Resume**: Accepts any user's PDF resume and parses raw text cleanly.
-2. **Candidate Profile**: Uses LLM reasoning to extract technical skills, experience level, and target roles.
-3. **Formulate Search Strategy**: Dynamically plans optimal job search queries based on candidate profile and user preferences.
-4. **Live Job Search**: Connects to legitimate live job sources via the Apify API (e.g. Google Jobs Scraper) to fetch active listings.
-5. **Normalize & Deduplicate**: Standardizes raw API pay-loads and eliminates duplicate postings.
-6. **Evaluate & Match**: Calculates compatibility scores, skill overlaps, and missing skills.
-7. **Rank & Present**: Sorts opportunities from highest to lowest relevance and presents clean job cards with original apply links.
-
----
-
-## 🏛️ AI Agent Core Concepts Mapping
-
-| Agent Concept | Implementation in this Application |
-|---|---|
-| **Environment** | User PDF resume + Web Job APIs (Apify) + User Preference Settings |
-| **Perception** | PDF text extraction (`resume/parser.py`) & comprehension of user constraints |
-| **Reasoning** | LLM analysis (`llm/client.py`) for candidate profiling & qualitative match rationale |
-| **Planning** | Dynamic query generation strategy (`prompts/search_prompt.py`) |
-| **Tool Usage** | Calling `ResumeParserTool`, `LLMClientTool`, `ApifyJobClient`, `MatcherTool`, `RankerTool` |
-| **Action** | Executing API job scrapers across multiple search queries concurrently |
-| **Observation** | Ingesting raw JSON API responses, normalizing schemas, and deduplicating jobs |
-| **Decision Making** | Skill-overlap scoring, filtering, ranking jobs, and recommending top matches |
-| **Goal** | Find, score, and rank the most suitable live job opportunities for any user |
-
----
-
-## 🏗️ Complete Workflow Architecture
+Unlike a single-agent script where one controller handles parsing, searching, and scoring in a monolithic loop, this system implements an autonomous **team of 6 specialized AI agents**. Each agent has bounded responsibilities, formal data contracts via **Pydantic models**, dedicated system prompts, and interacts through a central **LangGraph StateGraph**:
 
 ```text
-               USER
-                │
-         [ Upload PDF Resume ]
+                           USER RESUME (PDF) + PREFERENCES
+                                          │
+                                          ▼
+                          ┌───────────────────────────────┐
+                          │     Agent 6: Orchestrator     │
+                          │   (LangGraph State Machine)   │
+                          └───────┬───────────────┬───────┘
+                                  │               │
+            ┌─────────────────────┘               └─────────────────────┐
+            ▼                                                           ▼
+┌───────────────────────────────┐                   ┌───────────────────────────────┐
+│ Agent 1: Resume Analysis      │                   │ Shared State (LangGraph)      │
+│ - PyMuPDF Extraction          │                   │ - CandidateProfile (Pydantic) │
+│ - Technical Skill Discovery   │                   │ - RawJobListings              │
+│ - Education, Grad Year, Exp   │                   │ - VerifiedJobListings         │
+│ - Target Roles & Weak Skills  │                   │ - MatchedJobListings          │
+└───────────────┬───────────────┘                   │ - CareerAdviceReport          │
+                │                                   │ - ExecutionTraceLogs          │
+                ▼                                   └───────────────────────────────┘
+┌───────────────────────────────┐
+│ Agent 2: Job Search Agent     │
+│ - Intelligent Query Strategy  │
+│ - Apify Live Search & Fallback│
+│ - Fresher/Intern/Exp Targeting│
+└───────────────┬───────────────┘
                 │
                 ▼
-          RESUME PARSER (PyMuPDF)
+┌───────────────────────────────┐
+│ Agent 3: Job Verification     │
+│ - Application URL Validity    │
+│ - Semantic Deduplication      │
+│ - Eligibility & Grad Criteria │
+│ - Expired/Suspicious Flagging │
+└───────────────┬───────────────┘
                 │
                 ▼
-        CANDIDATE PROFILE (LLM / Regex)
+┌───────────────────────────────┐
+│ Agent 4: Job Matching Agent   │
+│ - Transparent Scoring Logic   │
+│ - Skill Overlap & Missing Tech│
+│ - Grad Year & Exp Eligibility │
+│ - Explainable Match Rationale │
+└───────────────┬───────────────┘
                 │
                 ▼
-       ┌────────────────────────┐
-       │     AI AGENT           │
-       │  (Orchestration Layer) │
-       └───────────┬────────────┘
-                   │
-                   ▼
-        JOB SEARCH TOOL MANAGER
-                   │
-        ┌──────────┴──────────┐
-        ▼                     ▼
-    APIFY API           DEMO MODE
-(Live Job Scraper)      (Fallback Data)
-        │                     │
-        └──────────┬──────────┘
-                   │
-                   ▼
-         JOB NORMALIZER & DEDUP
-                   │
-                   ▼
-         MATCHING ENGINE & SCORES
-                   │
-                   ▼
-          RANKING & FILTERING
-                   │
-                   ▼
-         RECOMMENDED JOB CARDS
-                   │
-                   ▼
-     [ APPLY / VIEW ORIGINAL JOB URL ]
+┌───────────────────────────────┐
+│ Agent 5: Career Advisor Agent │
+│ - Opportunity Prioritization  │
+│ - Systemic Skill Gap Analysis │
+│ - Tech Stack Learning Roadmap │
+│ - Role-Specific Resume Advice │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│ Orchestrator Final Response   │
+│ - Rich Streamlit Interface    │
+│ - Live Agent Progress Status  │
+│ - Verified & Matched Cards    │
+│ - Direct Links & Career Plan  │
+└───────────────────────────────┘
 ```
+
+---
+
+## 🤖 The 6 Specialist Agents
+
+### 1. Resume Analysis Agent (`agents/resume_agent.py`)
+- **Responsibilities**: Extracts text from PDF resumes using PyMuPDF; structures technical competencies, programming languages, frameworks, databases, developer tools, education history, graduation year, total years of experience, target roles, and missing industry skills.
+- **Output**: `CandidateProfile` (Pydantic model).
+
+### 2. Job Search Agent (`agents/job_search_agent.py`)
+- **Responsibilities**: Plans 3–5 targeted search query strings tailored to candidate seniority (including fresher, junior, or entry-level variants when experience $\le 1$ year); queries live web listings via Apify actors or fallback database.
+- **Output**: `List[RawJobListing]`.
+
+### 3. Job Verification Agent (`agents/verification_agent.py`)
+- **Responsibilities**: Audits application URLs for syntax and host legitimacy; deduplicates across URL and composite (`title|company|location`) signatures; extracts experience requirements (`min_experience_years`, `max_experience_years`), graduation-year restrictions (`graduation_years_accepted`), and application deadlines; flags expired or suspicious listings with documented evidence without hallucinating missing data.
+- **Output**: `List[VerifiedJob]`.
+
+### 4. Job Matching Agent (`agents/matching_agent.py`)
+- **Responsibilities**: Computes transparent, explainable compatibility scores (0–100) using weighted subscores:
+  - Skill Overlap Subscore ($\le 50$ pts)
+  - Experience Alignment Subscore ($\le 20$ pts)
+  - Role Title Alignment Subscore ($\le 15$ pts)
+  - Location & Workplace Alignment Subscore ($\le 15$ pts)
+- Compares graduation-year and experience requirements against candidate credentials to assign formal eligibility status (`Eligible`, `Marginal`, `Ineligible`).
+- **Output**: `List[MatchedJob]`.
+
+### 5. Career Advisor Agent (`agents/career_advisor_agent.py`)
+- **Responsibilities**: Synthesizes verified and matched listings; computes a prioritized application queue (which jobs to apply for first); detects systemic market skill gaps across listings; recommends high-ROI technologies to learn; provides actionable resume improvement suggestions.
+- **Output**: `CareerAdvice`.
+
+### 6. Orchestrator Agent (`agents/orchestrator.py`)
+- **Responsibilities**: Central coordinator maintaining shared workflow state (`AgentWorkflowState`); manages state transitions across a LangGraph directed graph; tracks execution duration and status for every agent; handles failures and retries; notifies UI of live agent transitions.
 
 ---
 
@@ -92,48 +111,55 @@ Unlike a simple script or a basic LLM prompt, an AI Agent acts as an **orchestra
 ```text
 AI-Job-Search-Agent/
 │
-├── app.py                     # Streamlit web application dashboard
-├── main.py                    # Command-line (CLI) test runner
-│
-├── agent/                     # Core Agent Orchestration Layer
+├── models/                         # Formal Pydantic schemas & workflow state
 │   ├── __init__.py
-│   ├── agent.py               # Main JobSearchAgent class
-│   ├── state.py               # Agent State Machine tracking progress
-│   └── tools.py               # Tool registry wrapping capabilities
+│   ├── schemas.py                  # CandidateProfile, RawJobListing, VerifiedJob, MatchedJob, CareerAdvice
+│   └── state.py                    # LangGraph TypedDict & Pydantic state model
 │
-├── resume/                    # Resume Perception Module
+├── agents/                         # The 6 Autonomous Specialist Agents
 │   ├── __init__.py
-│   └── parser.py              # PyMuPDF text extraction & validation
+│   ├── orchestrator.py             # Agent 6: LangGraph Central Orchestrator
+│   ├── resume_agent.py             # Agent 1: Resume Analysis Agent
+│   ├── job_search_agent.py         # Agent 2: Job Search Agent
+│   ├── verification_agent.py       # Agent 3: Job Verification Agent
+│   ├── matching_agent.py           # Agent 4: Job Matching Agent
+│   └── career_advisor_agent.py     # Agent 5: Career Advisor Agent
 │
-├── llm/                       # LLM Reasoning Layer
+├── tools/                          # Modular agent tools
 │   ├── __init__.py
-│   └── client.py              # OpenAI Python SDK client with fallback logic
+│   ├── resume_parser.py            # PyMuPDF extraction tool
+│   ├── apify_tool.py               # Apify job search and mock fallback tool
+│   └── job_verification_tool.py    # URL validator, eligibility extractor, and audit tool
 │
-├── jobs/                      # Action & Observation Layer
+├── prompts/                        # Structured system and user prompts
 │   ├── __init__.py
-│   ├── apify_client.py        # Apify API SDK client for live job scraping
-│   ├── job_search.py          # Job Search Manager & concurrent execution
-│   └── normalizer.py          # Schema normalizer & duplicate detection
+│   ├── resume_prompt.py            # Agent 1 prompt templates
+│   ├── search_prompt.py            # Agent 2 prompt templates
+│   ├── verification_prompt.py      # Agent 3 prompt templates
+│   ├── matching_prompt.py          # Agent 4 prompt templates
+│   └── advisor_prompt.py           # Agent 5 prompt templates
 │
-├── matching/                  # Decision Making Layer
+├── tests/                          # Automated test suite
 │   ├── __init__.py
-│   ├── matcher.py             # Match score evaluator & skill gap analysis
-│   └── ranker.py              # Ranking and sorting engine
+│   └── test_multi_agent_system.py  # Comprehensive multi-agent unit & integration tests
 │
-├── memory/                    # Preference Memory Layer
-│   ├── __init__.py
-│   └── memory.py              # Session memory for non-sensitive user settings
+├── resume/                         # Core perception engine (preserved)
+│   └── parser.py
+├── jobs/                           # Scraper & normalizer engine (preserved)
+│   ├── apify_client.py
+│   ├── job_search.py
+│   └── normalizer.py
+├── matching/                       # Core scoring engine (preserved)
+│   ├── matcher.py
+│   └── ranker.py
+├── memory/                         # User preference storage (preserved)
+│   └── memory.py
 │
-├── prompts/                   # Reusable Prompt Templates
-│   ├── __init__.py
-│   ├── resume_prompt.py       # Candidate profile JSON prompt
-│   ├── search_prompt.py       # Query planning prompt
-│   └── matching_prompt.py     # Qualitative fit explanation prompt
-│
-├── requirements.txt           # Python dependencies
-├── .env.example               # Template for environment credentials
-├── .gitignore                 # Excludes secrets & temporary files
-└── README.md                  # Documentation (this file)
+├── app.py                          # Streamlit Multi-Agent UI dashboard
+├── main.py                         # Command-Line (CLI) multi-agent test runner
+├── requirements.txt                # Updated Python dependencies
+├── .env.example                    # Environment credentials template
+└── README.md                       # Documentation (this file)
 ```
 
 ---
@@ -153,7 +179,8 @@ Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
-Edit `.env` to add your credentials:
+
+Edit `.env` to configure your credentials:
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4o-mini
@@ -162,46 +189,56 @@ APIFY_ACTOR_ID=misceres/indeed-scraper
 APIFY_COUNTRY=IN
 ```
 
-*(Note: You can also enter API keys directly in the Streamlit sidebar UI).*
+*(Note: API keys can also be entered directly in the Streamlit sidebar UI).*
 
 ---
 
 ## 🚀 How to Run the Application
 
 ### Option A: Interactive Streamlit Web UI (Recommended)
-Run the Streamlit app:
+Launch the Streamlit dashboard:
 ```bash
 streamlit run app.py
 ```
 Open your browser at `http://localhost:8501`.
 
-### Option B: Command Line Interface (CLI Test)
-Run the programmatic agent test script:
+**Features in UI:**
+- Resume PDF upload with automated size & format validation.
+- Live agent execution pipeline with status badges for each specialist agent.
+- Metrics grid: Discovered jobs, verified listings, flagged warnings, top match score.
+- **Recommended Jobs Tab**: Verified cards, eligibility status, transparent score breakdown, matched/missing skill tags, and direct application links.
+- **Career Advisor Guidance Tab**: Priority application queue, systemic skill gap analysis, learning roadmap, and resume optimization tips.
+- **Candidate Profile Tab**: Extracted skills, graduation year, target roles, and formulated search queries.
+- **Audit & Trace Logs Tab**: Chronological event logs for complete observability.
+
+### Option B: Command Line Interface (CLI Tester)
+Run the CLI test script:
 ```bash
 python main.py
 ```
 
 ---
 
-## 🔍 How Live Job Search Works
+## 🧪 Running Automated Tests
 
-- **When `APIFY_API_TOKEN` is configured**: The Agent sends generated queries to the Apify API which launches the specified Actor (e.g. `apify/google-jobs-scraper`) to gather real active job listings.
-- **When `APIFY_API_TOKEN` is missing**: The app gracefully displays `"Live job search is not configured."` and uses labeled **DEMO DATA** to demonstrate the complete AI Agent workflow.
+Run the comprehensive multi-agent test suite:
+```bash
+python -m unittest tests/test_multi_agent_system.py
+```
+
+The test suite validates:
+1. `ResumeAnalysisAgent`: PDF extraction and profile structuring.
+2. `JobSearchAgent`: Query planning and job discovery.
+3. `JobVerificationAgent`: URL validation, duplicate detection, and eligibility auditing.
+4. `JobMatchingAgent`: Multi-factor compatibility scoring and eligibility classification.
+5. `CareerAdvisorAgent`: Application prioritization, skill gap analysis, and learning roadmap.
+6. `MultiAgentOrchestrator`: Full directed graph execution and error recovery.
 
 ---
 
-## 🔒 Security Principles
+## 🔒 Security & Robustness Principles
 
-1. **No Hardcoded Keys**: API keys are loaded via `.env` or user UI input.
-2. **Ignored Secrets**: `.env` is listed in `.gitignore` to prevent accidental commits.
-3. **No Applications Submitted**: The application NEVER submits job applications automatically. It only provides original direct links for the user to apply manually.
-4. **Data Privacy**: Resumes are parsed in-memory and are not permanently stored on remote servers.
-
----
-
-## 🛠️ Summary of Technologies Used
-- **UI**: Streamlit
-- **PDF Extraction**: PyMuPDF (`pymupdf`)
-- **LLM**: OpenAI API (`openai` Python SDK v1.0+)
-- **Live Scraper**: Apify API (`apify-client`)
-- **State & Logic**: Pure Python OOP & Functional design
+1. **Zero Key Leakage**: API credentials are loaded exclusively from `.env` or password-masked Streamlit inputs; `.env` is excluded in `.gitignore`.
+2. **Offline & Resilient Execution**: All agents feature heuristic fallback modes to ensure testing and execution succeed even if external APIs encounter downtime or rate limits.
+3. **No Automatic Applications**: The system never submits job applications on behalf of the user. It provides verified direct links for manual candidate review.
+4. **Data Privacy**: Uploaded resumes are processed in-memory and are not permanently persisted to remote storage.
